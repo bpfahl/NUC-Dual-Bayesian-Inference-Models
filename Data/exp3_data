@@ -1,0 +1,51 @@
+subj_id,age,gender,condition,teach,teach_exp,reward,cost,harder,cooler,video
+MC_160508_02,6.43,male,Instruction,yellow,"""Because harder ones are harder to remember""",0,1,red,yellow,yes
+MC_160508_04,5.25,male,Instruction,red,"""I don't know""",NA,NA,yellow,yellow,yes
+MC_160508_05,5.08,female,Instruction,yellow,"""I don't know""",NA,NA,yellow,yellow,yes
+MC_160508_07,5.28,male,Instruction,yellow,"""I don't know""",0,0,same,yellow,yes
+MC_160513_01,5.36,female,Instruction,yellow,"""Because she'll like it""",1,0,same,same,yes
+MC_160513_02,5.15,female,Instruction,yellow,"""You hear the noise""",1,0,yellow,same,yes
+MC_160513_03,5.81,male,Instruction,red,"""Because its just one button""",0,1,yellow,same,yes
+MC_160522_01,6.12,female,Instruction,yellow,"""Because it plays music""",1,0,yellow,yellow,yes
+MC_160522_02,5.94,male,Instruction,yellow,"""Because it has a lot of buttons""",0,1,yellow,same,yes
+MC_160604_01,7.14,female,Instruction,yellow,"""Because it has lots of buttons; because if she presses this one and this one, it doesn't work and if she presses this one and this one at the same time, it doesn't work""",0,1,yellow,same,yes
+MC_160604_02,7.14,female,Instruction,red,"""Because it only has one buton""",0,1,yellow,same,yes
+MC_160604_05,7.18,male,Instruction,yellow,"""Because this one is a little more complicated and this is just one button""",0,1,yellow,yellow,yes
+MC_160604_06,6.03,male,Instruction,yellow,"""Because its a little bit harder""",0,1,yellow,same,yes
+MC_160604_07,7.96,female,Instruction,red,"""Because its just one button to press""",0,1,yellow,yellow,yes
+MC_160604_10,6.8,male,Instruction,yellow,"""Because its diff buttons""",0,1,same,same,yes
+MC_160604_11,5.14,female,Instruction,yellow,"""Cuz it has two buttons""",0,1,yellow,same,yes
+MC_160604_12,6.5,female,Instruction,red,"""Because its easy""",0,1,yellow,yellow,yes
+MC_160604_13,7.4,female,Instruction,yellow,"""Because I think she wouldn't know which two buttons to press but I think she would know just that button""",0,1,yellow,same,yes
+MC_160621_01,6.6,female,Instruction,yellow,"""Because you press two buttons and in that one you only press one""",0,1,yellow,yellow,yes
+MC_160621_02,7.86,female,Instruction,yellow,"""Because its harder and if she knows that one she'll probably know this one""",0,1,yellow,red,yes
+MC_160621_03,6.89,male,Instruction,yellow,"""Cuz that one is easy bc there is only one button but there there is more than one button so it could be harder to play music""",0,1,yellow,same,yes
+MC_160621_04,6.07,male,Instruction,yellow,"""Because she would still know to press that button (red)""",0,1,yellow,same,yes
+MC_160621_05,6.3,female,Instruction,red,"""Because that one has more buttons and she might forget which button and press the wrong one""",0,1,yellow,yellow,yes
+MC_160621_06,5.34,female,Instruction,yellow,"""I don't know""",NA,NA,same,same,yes
+MC_160621_07,6.87,female,Instruction,red,"""Because there's only one button""",0,1,yellow,same,yes
+MC_160925_02,5.005479452,female,Exploration,yellow,It's my favorite,1,0,yellow,Same,yes
+MC_160925_06,6.410958904,female,Exploration,red,Bc it's probably the easiest and then the hard one,0,1,yellow,Same,yes
+MC_160925_08,5.117808219,female,Exploration,yellow,Bc it makes a little bit of noise,1,0,Same,Same,yes
+MC_161002_02,6.805479452,male,Exploration,yellow,Bc it has like a passcode or something,0,1,yellow,yellow,yes
+MC_161008_02,7.309589041,female,Exploration,yellow,Bc there's only one button on that one; bc it has more buttons,0,1,yellow,yellow,yes
+MC_161119_01,5.857534247,female,Exploration,yellow,Bc it's too hard,0,1,yellow,red,yes
+MC_161210_03,7.01369863,female,Exploration,yellow,Bc this one has more buttons than this one,0,1,yellow,Same,yes
+MC_161210_05,5.183561644,male,Exploration,yellow,pressed two buttons but didn't say anything,NA,NA,yellow,yellow,yes
+MC_161210_07,6.142465753,female,Exploration,yellow,Bc it's harder,0,1,yellow,yellow,yes
+MC_161221_02,6.747945205,female,Exploration,yellow,"That one maybe because it's not really, bc this one (LC) is really easy but this one's (HC) not very easy",0,1,yellow,yellow,yes
+MC_161221_03,5.465753425,male,Exploration,yellow,Bc it's um it's tighter than this one,0,0,yellow,Same,yes
+MC_170107_01,6.561643836,female,Exploration,yellow,This one cause it's kind of hard,0,1,yellow,yellow,yes
+MC_170107_03,6.136986301,male,Exploration,yellow,Cause that one (LC) is more easy,0,1,yellow,Same,yes
+MC_170107_05,5.208219178,female,Exploration,red,Bc she doesn't know,0,1,yellow,red,yes
+MC_170107_07,6.22739726,female,Exploration,yellow,This is trickier (HC); there's only one button; it would be easier if you taught this (LC);,0,1,yellow,Same,yes
+MC_170107_09,5.624657534,male,Exploration,yellow,presses buttons; bc you have to press this button and then the other one,0,1,yellow,yellow,yes
+MC_170107_10,5.419178082,male,Exploration,yellow,I don't know,NA,NA,yellow,Same,yes
+MC_170218_03,5.693150685,male,Exploration,yellow,This one is pretty hard so you should probably teach her this one (HC); Cause it's MUCH harder,0,1,yellow,yellow,yes
+MC_170218_07,6.808219178,male,Exploration,yellow,That one (LC) more obvious,0,1,yellow,Same,yes
+MC_170225_02,5.94,female,Exploration,yellow,Because that one has lots of buttons and that one (LC) just has one,0,1,yellow,Same,yes
+MC_170311_02,7.304109589,female,Exploration,red,Cause it has funny music,1,0,yellow,Same,yes
+MC_170319_01,5.375342466,female,Exploration,yellow,no response,NA,NA,yellow,Same,yes
+MC_170319_04,6.326027397,female,Exploration,yellow,Because it's almost like a drawign and I really like drawing,1,0,yellow,Same,yes
+MC_170325_01,6.64,male,Exploration,red,Because it's easier,0,1,yellow,Same,yes
+MC_170325_03,6.04,male,Exploration,red,Because this one is easy; we already know you have to press this (demonstrated),0,1,yellow,yellow,yes

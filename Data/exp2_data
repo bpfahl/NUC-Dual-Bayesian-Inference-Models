@@ -1,0 +1,51 @@
+subj_id,age,gender,condition,teach,teach_exp,reward,cost,harder,cooler,video
+MC_160925_01,6.219178082,female,Teach,yellow,Bc it might be harder,0,1,yellow,same,yes
+MC_160925_03,6.520547945,female,Teach,red,Bc I think it's really cool,1,0,yellow,red,yes
+MC_160925_05,6.632876712,male,Teach,yellow,Bc it's harder,0,1,yellow,same,yes
+MC_160925_07,4.904109589,female,Teach,yellow,Bc it's not easy,0,1,yellow,same,yes
+MC_161002_01,6.808219178,female,Teach,red,Bc maybe it's easier for her to learn and maybe later she can try this one (HC),0,1,yellow,same,yes
+MC_161210_01,5.882191781,male,Teach,yellow,Bc it's awesome,1,0,yellow,same,yes
+MC_161210_04,5.819178082,female,Teach,yellow,"This one looks kinda easy (LC), so I think this one (HC)",0,1,yellow,same,yes
+MC_161210_06,5.578082192,female,Teach,yellow,Because um the other buttons are not working and if you tried these (pressed correct buttons) it'll work,0,1,yellow,red,yes
+MC_161210_08,6.619178082,male,Teach,yellow,That one bc I think it's the really hard one,0,1,yellow,same,yes
+MC_161210_09,5.646575342,male,Teach,red,Bc it does that (presses button),1,0,yellow,same,yes
+MC_161221_01,7.342465753,female,Teach,yellow,"I think you should teach her the one that is more specific; cause you have to try more things, and that one the only button is that one; that's so obvious",0,1,yellow,same,yes
+MC_170107_02,5.320547945,female,Teach,yellow,Bc I don't know; I think you should teach her because it has lots of buttons,0,1,yellow,yellow,yes
+MC_170107_04,5.156164384,female,Teach,red,Bc I press it and it goes all rainbow and spins,1,0,yellow,same,yes
+MC_170107_06,5.873972603,male,Teach,yellow,That one's a little more complicated than that one,0,1,yellow,same,yes
+MC_170218_01,5.057534247,female,Teach,red,Because I think she'll like those colored lights,1,0,yellow,yellow,yes
+MC_170218_02,5.693150685,male,Teach,yellow,What if she thinks if she presses this one and this one it makes a sound (points to two wrong buttons) or she could figure it out on here own (makes LC toy goeas and then explores HC toy again); so she can know which buttons make the sound and that if you press two of them when one of them is the small one it makes a sound,1,1,yellow,same,yes
+MC_170218_04,6.298630137,female,Teach,yellow,Um because only certain buttons work,0,1,yellow,same,yes
+MC_170218_06,6.054794521,female,Teach,yellow,Because it makes music,1,0,yellow,same,yes
+MC_170225_01,6.81,male,Teach,red,Cause that one lights up (LC),1,0,yellow,same,yes
+MC_170225_03,5.96,male,Teach,yellow,Because it has lots of buttons,0,1,yellow,same,yes
+MC_170311_03,7.983561644,male,Teach,yellow,Because it does something,1,0,red,same,yes
+MC_170311_04,6.873972603,female,Teach,yellow,Because it makes noise,1,0,yellow,same,yes
+MC_170319_03,6.482191781,male,Teach,yellow,Because it's very hard,0,1,yellow,red,yes
+MC_170319_05,5.44109589,male,Teach,red,Because it has color,1,0,yellow,same,yes
+MC_170325_02,6.2,male,Teach,yellow,Because it has more buttons,0,1,yellow,same,yes
+MC_150503_01,6.534246575,female,Play,red,NA,NA,NA,yellow,red,yes
+MC_150503_02,5.769863014,female,Play,red,bc it has lights,1,0,yellow,yellow,yes
+MC_150503_03,5.534246575,male,Play,red,NA,NA,NA,yellow,red,yes
+MC_150503_04,7.810958904,male,Play,yellow,NA,NA,NA,yellow,yellow,yes
+MC_150503_05,5.676712329,female,Play,yellow,NA,NA,NA,yellow,red,yes
+MC_150503_06,5.821917808,male,Play,red,bc it spins,1,0,yellow,yellow,yes
+MC_150503_07,6.731506849,female,Play,red,bc I like it/Expt: What do you like about it?/ child: the lights,1,0,yellow,NA,yes
+MC_150503_08,5.980821918,male,Play,red,bc it's much cooler and easier,1,1,yellow,red,yes
+MC_150503_09,7.802739726,female,Play,red,bc I like spinning things,1,0,yellow,NA,yes
+MC_150503_10,6.178082192,male,Play,red,bc it was a lot easier,0,1,yellow,red,yes
+MC_150516_01,5.857534247,male,Play,yellow,Bc it makes music,1,0,yellow,red,yes
+MC_150516_04,7.835616438,female,Play,red,I choose to play with this toy bc it has more design and more noise,1,0,yellow,same,yes
+MC_150516_06,5.569863014,female,Play,red,bc it's quiet,1,0,yellow,same,yes
+MC_150516_09,5.471232877,male,Play,red,bc it zooms in colors,1,0,yellow,red,yes
+MC_150523_01,5.191780822,female,Play,red,Bc I like the sound it makes,1,0,yellow,same,no
+MC_150523_02,6.369863014,female,Play,red,Bc  Ilike it,1,0,yellow,same,yes
+MC_150523_03,5.290410959,male,Play,red,Bc I like it,1,0,same,red,yes
+MC_150523_04,4.967123288,male,Play,red,It's cool,1,0,yellow,red,yes
+MC_150523_05,6.126027397,female,Play,red,Bc it has nice lights,1,0,yellow,red,yes
+MC_150523_06,6.890410959,male,Play,red,Bc this is like spinning and this is just music,1,0,yellow,same,yes
+MC_150626_01,6.915068493,female,Play,yellow,Bc first of all I like music sometimes and that it sounds like a quitar and it's my favorite color blue and the circles are yellow,1,0,yellow,same,yes
+MC_150626_02,5.854794521,female,Play,red,Bc it lights up,1,0,yellow,same,yes
+MC_150626_03,6.219178082,male,Play,red,Bc it has lights,1,0,yellow,red,yes
+MC_150920_03,7.2,female,Play,yellow,To push the little button and the big button,0,1,same,same,yes
+MC_150926_04,6.660273973,female,Play,red,Bc it lights up,1,0,yellow,red,yes

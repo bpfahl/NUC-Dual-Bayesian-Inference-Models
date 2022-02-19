@@ -1,0 +1,991 @@
+---
+title: "NUC Dual Bayesian Inference Models for Bridgers et al. (2020)"
+author: "Bianca Pfahl"
+date: "19.02.2022"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 4
+
+---
+
+```{r setup, include=FALSE}
+
+## Packages from ABDA course
+
+# package for convenience functions (e.g. ggplot2, dplyr, etc.)
+library(tidyverse)
+
+# package for Bayesian regression modeling
+library(brms)
+
+# package for visualization
+library(tidybayes)
+library(ggpubr)
+
+# package to visualize 
+library(bayesplot)
+
+library(rstan)
+
+library(xtable)
+
+#devtools::install_github("michael-franke/aida-package")
+library(aida)
+
+# use the aida-theme for plotting
+theme_set(theme_aida())
+
+# global color scheme / non-optimized
+project_colors = c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000")
+
+# setting theme colors globally
+scale_colour_discrete <- function(...) {
+  scale_colour_manual(..., values = project_colors)
+}
+scale_fill_discrete <- function(...) {
+   scale_fill_manual(..., values = project_colors)
+} 
+
+```
+
+#### 1. Data
+
+All read in Data comes from Bridgers et. al (2020): Young children consider the expected utility of others’ learning to decide what to teach
+
+Reading in data from the main experiment (experiment 1-3) and the norming study
+
+```{r, include=FALSE}
+
+# Reading in data from experiment 1 and relevant data labels
+
+condition_labels <- 
+  c("Rewards &\nCosts",
+    "Different\nCosts",
+    "Different\nRewards",
+    "Medium Cost\nConflict",
+    "High Cost\nConflict",
+    "Extra-High Cost\nConflict"
+  )
+
+condition_labels_no_break <- 
+  c("Rewards & Costs",
+    "Different Costs",
+    "Different Rewards",
+    "Medium Cost Conflict",
+    "High Cost Conflict",
+    "Extra-High Cost Conflict"
+  )
+
+condition_levels <-
+  c(
+    "1: R&C", 
+    "3: Diff. C", 
+    "2: Diff. R", 
+    "5: Med. Cost", 
+    "4: RvC", 
+    "7: 12 High High Cost"
+  )
+
+# Tidy data
+choice_data <-
+  read_csv('Data/EmpiricalData.csv', col_types = cols()) %>% 
+  mutate(
+    condition = 
+      factor(Condition, levels = condition_levels, labels = condition_labels_no_break)
+  )  %>%
+  arrange(condition) %>% 
+  mutate(condition_nr = c(1,2,3,4,5,6)) %>% 
+  select(condition_nr, condition,red_toy = RedToy, sample_size = SampleSize)
+
+choice_data
+
+```
+
+
+```{r, include=FALSE}
+
+# Reading in Data from Experiment 2 & 3
+
+# Experiment 2 data
+d_exp2 <- read_csv('Data/exp2_data',  col_types = cols()) %>% 
+  filter(condition=='Teach') %>% 
+  select(subj_id, teach) %>% 
+  mutate(condition = 'Exp2: Teach') %>% 
+  select(condition, teach) %>% 
+  add_count(teach) %>% 
+  filter(teach=='red') %>% 
+  distinct() %>% 
+  mutate(sample_size = 25,
+         condition_nr = 7) %>% 
+  rename(red_toy = n) %>% 
+  select(condition_nr, condition, red_toy, sample_size)
+  
+  
+# Experiment 3 data
+d_exp3 <- read_csv('Data/exp3_data',  col_types = cols()) %>% 
+  filter(condition=='Exploration') %>% 
+  select(subj_id, teach) %>% 
+  mutate(condition = 'Exp3: Exploration') %>% 
+  select(condition, teach) %>% 
+  add_count(teach) %>% 
+  filter(teach=='red') %>% 
+  distinct() %>% 
+  mutate(sample_size = 25,
+         condition_nr = 8) %>% 
+  rename(red_toy = n) %>% 
+  select(condition_nr, condition, red_toy, sample_size)
+
+all_choice_data <- bind_rows(choice_data, d_exp2, d_exp3)
+
+
+```
+
+Choice Data from Main Experiment:
+
+```{r}
+all_choice_data 
+```
+
+```{r, read in data, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
+
+# Reading in Norming Data
+
+d_norm <- read_csv('Data/norm_data',  col_types = cols())
+
+d_norm_tidy <- 
+  d_norm %>%
+  mutate(
+    choice = factor(choice, levels = c("high_reward", "low_reward"))
+    #gender = factor(gender, levels = c("male", "female"))
+  ) %>% 
+  mutate(Preference = if_else(choice=="high_reward", "lights", "music")) %>% 
+  select(subj_id,choice,Preference)
+
+# Prepare Data from the Norming Study
+
+d_norm_compact <- 
+  d_norm_tidy %>% 
+  count(Preference) %>% 
+  filter(Preference=="lights") %>% 
+  mutate(SampleSize = nrow(d_norm_tidy),
+         Lights = n) %>% 
+  select(Preference,Lights, SampleSize)
+
+
+```
+
+Norming Data:
+
+```{r}
+d_norm_compact
+```
+
+Combining all data from main experiment & norming study into a list to parse to Stan
+
+cost matrix: dimension 1 stands for: activation [1] or discovery [2] cost, dimension 2 stands for the 4 toy difficulty levels [1-4]
+
+reward_vec_red/yellow and cost_vec_red/yellow indicate the indices to access the correct rewards & costs per condition
+
+```{r}
+
+# transforming cost values from (0,100) interval to (0,1) inverval
+costs = matrix(c(1,1,1,4,2,29,2,79), nrow=2, ncol=4)
+costs = costs / 100
+
+
+choice_data_list = list(
+  k = all_choice_data$red_toy, n = all_choice_data$sample_size, n_conditions = 8, rewards_vec_red = c(1,1,2,2,2,2,2,1),
+  rewards_vec_yellow = c(2,1,1,1,1,1,1,1), cost_vec_red = c(1,1,1,1,1,1,1,1), cost_vec_yellow  = c(3,3,1,2,3,4,3,3),costs = costs
+)
+
+d_norm_list <- list(k_norm = d_norm_compact$Lights, n_norm = d_norm_compact$SampleSize)
+
+# Combining data from norming study and rest
+
+data_and_norm <- append(choice_data_list, d_norm_list)
+
+data_and_norm
+
+# creating a slightly altered version for the cost models
+
+```
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
+
+# Combining all data from main experiment & norming study into a list to parse to Stan for the Cost Model
+
+choice_data_list_cost_model = list(
+  k = all_choice_data$red_toy, n = all_choice_data$sample_size, n_conditions = 8, rewards_vec_red = c(1,1,2,2,2,2,2,1),
+  rewards_vec_yellow = c(2,1,1,1,1,1,1,1), cost_vec_red = c(1,1,1,1,1,1,1,1), cost_vec_yellow  = c(3,3,1,2,3,4,3,3)
+)
+
+d_norm_list_cost_model <- list(k_norm = d_norm_compact$Lights, n_norm = d_norm_compact$SampleSize)
+
+# Combining data from norming study and rest
+
+data_and_norm_cost_model <- append(choice_data_list_cost_model, d_norm_list_cost_model)
+```
+
+The following code chunk generates the data for Table 1 from the thesis:
+
+```{r}
+
+pretty_costs <- tibble(
+  Costs = c("low", "medium", "high", "extra high"),
+  Activation_Cost = c(0.01,0.01,0.02,0.02),
+  Discovery_Cost = c(0.01,0.04,0.29,0.79)
+)
+
+pretty_costs
+print(xtable(pretty_costs, type = "latex"), file = "costs_table.tex")
+
+```
+
+#### 2. Models
+
+#### 2.1 Main Model: Dual Bayesian Inference Model
+
+```{stan, output.var="Dual_Bayesian_Inference_Model", eval=F}
+
+
+// Dual Bayesian Inference Model (Main Model)
+// The model performs dual Bayesian inference over two distinct data sets: the main experiment data and norming study
+// data from Bridgers et al. (2020)
+
+data { 
+  int<lower=1> n_conditions;
+  int<lower=0> k[n_conditions];
+  int<lower=1> n[n_conditions];
+  int<lower=1> n_norm;
+  int<lower=0> k_norm;
+  
+  // REWARD indices
+  int rewards_vec_red[n_conditions]; 
+  int rewards_vec_yellow[n_conditions]; 
+  
+  // COST indices
+  int cost_vec_red[n_conditions];
+  int cost_vec_yellow[n_conditions];
+  
+  // COST VECTOR
+  real costs[2,4];
+} 
+parameters {
+  
+  //REWARD VECTOR: reward[1] corresponds to the music mechanism, reward[2] corresponds to the light mechanism
+  real<lower=0, upper=1> rewards[2];
+  
+} 
+
+model {
+  real utility_toy_red;
+  real utility_toy_yellow;
+  real prob_choice_red;
+  real prob_lights;
+  
+  // HYPERPARAMETERS
+  real alpha = 5;
+  real explo_para = 0.5;
+  
+  // PRIORS 
+  rewards[1]  ~ beta(1,1);
+  rewards[2] ~ beta(1,1);
+  
+ // MAIN LOOP: going through all 6 conditions of the experiment
+  
+  for (i in 1:n_conditions) {
+    
+    // UTILITIES
+    // computing utility values for red toy and yellow toy respectively, according to condition
+    utility_toy_red = rewards[rewards_vec_red[i]] - costs[1][cost_vec_red[i]] + explo_para * rewards[rewards_vec_yellow[i]] - costs[2][cost_vec_yellow[i]];
+    utility_toy_yellow = rewards[rewards_vec_yellow[i]] - costs[1][cost_vec_yellow[i]] + explo_para * rewards[rewards_vec_red[i]] - costs[2][cost_vec_red[i]];
+  
+    // PROBABILITY FOR RED TOY
+    // computing the probability for a child to choose the red toy using softmax choice rule
+    prob_choice_red = exp(alpha * utility_toy_red) / (exp(alpha * utility_toy_red) + exp(alpha * utility_toy_yellow));
+    
+    // POSTERIOR
+    // Observed amount of decisions for red toy
+    k[i] ~ binomial(n[i], prob_choice_red);
+  }
+  
+  // NORMING STUDY
+  
+  //PROBABILITY FOR LIGHT TOY
+  // computing the probability for a child to choose the light toy using softmax choice rule
+  prob_lights = exp(alpha * rewards[2]) / (exp(alpha * rewards[2]) + exp(alpha*rewards[1])); 
+  
+  // NORMING STUDY POSTERIOR 
+  // Observed amount of decisions for light toy
+  k_norm ~ binomial(n_norm, prob_lights);
+}
+
+```
+
+```{r, echo=FALSE, results=FALSE}
+
+# running the Stan model
+
+Dual_Bayesian_Inference_Model <- stan(file='Models/Dual_Bayesian_Inference_Model.stan',   
+                data=data_and_norm,
+                iter=10000,
+                chains=4,
+                thin=1
+)
+
+```
+
+The following code chunk creates the data for Table 2 from the thesis:
+
+```{r}
+
+Dual_Bayesian_Inference_Model_tibble <- summary(Dual_Bayesian_Inference_Model)$summary
+
+Dual_Bayesian_Inference_Model_tibble
+print(xtable(Dual_Bayesian_Inference_Model_tibble, type = "latex"), file = "Dual_Bayesian_Inference_Model_Output.tex")
+
+```
+
+Visualising the Results: Dual Bayesian Inference Model
+
+The following code chunk creates Figure 6 (Left) from the thesis:
+
+```{r, WARNING=FALSE}
+
+# extract samples from the stanfit object 
+Dual_Bayesian_Inference_Model_samples <- tidybayes::tidy_draws(Dual_Bayesian_Inference_Model)
+
+Dual_Bayesian_Inference_Model_samples_matrix <- as.matrix(Dual_Bayesian_Inference_Model_samples)
+
+mcmc_areas(Dual_Bayesian_Inference_Model_samples_matrix,
+           regex_pars = "rewards\\[[1-2]\\]", prob = 0.8, area_method = "equal height") +
+  scale_y_discrete(
+      labels = c("rewards[1]" = "Reward - Music",
+             "rewards[2]" = "Reward - Lights"
+             )) +
+       labs(x="Density",
+   title = "Posterior Distributions: Rewards",
+   subtitle = "with medians and 80% intervals") +
+  theme(plot.title.position = "plot",
+        plot.caption.position =  "plot") +
+  legend_move("none")
+
+dev.copy(png,filename="Dual_Bayesian_Inference_Model_posteriors.png")
+dev.off ()
+
+```
+
+The following code chunk creates Figure 6 (Right) from the thesis:
+
+```{r}
+
+Dual_Bayesian_Inference_Model_samples <- Dual_Bayesian_Inference_Model_samples %>% 
+                  mutate(difference = `rewards[2]` - `rewards[1]`,
+                         mean_difference = mean(difference))
+
+# accessing the mean difference between the two rewards
+mean_difference = Dual_Bayesian_Inference_Model_samples$mean_difference[1]
+
+color_scheme_set("teal")
+
+Dual_Bayesian_Inference_reward_difference_plot <- ggplot(Dual_Bayesian_Inference_Model_samples, aes(x=`difference`)) + geom_density(color="#69b3a2",fill="mediumaquamarine", alpha=0.5) + geom_vline(xintercept=mean_difference, color="violetred4", size=1,linetype="dashed") +
+  labs(x=expression(bold(R[light] - R[music])), y="Density",
+   title = "Difference in Reward",
+   subtitle = expression(R[light] - R[music])) +
+  theme(plot.title.position = "plot",
+        plot.caption.position =  "plot")
+
+Dual_Bayesian_Inference_reward_difference_plot
+
+dev.copy(png,filename="Dual_Bayesian_Inference_Reward_Difference.png")
+dev.off ()
+
+```
+
+
+Hypothesis Tests: Dual Bayesian Inference Model
+
+The following code chunk creates the data for Table 3 from the thesis:
+
+```{r}
+
+# employing a one-sided hypothesis from the brms package to check if the posterior for reward music and reward light are credibly different
+
+hypothesis_test_Dual_Bayesian_Inference_Model <- hypothesis(Dual_Bayesian_Inference_Model_samples, 'rewards[2] > rewards[1]')
+
+hypothesis_test_Dual_Bayesian_Inference_Model
+
+print(xtable(hypothesis_test_Dual_Bayesian_Inference_Model$hypothesis, type = "latex"), file = "hypothesis_table_2rewards.tex")
+
+
+```
+
+##### 2.2 Four Rewards Model
+
+Stan Model:
+
+```{stan, output.var="Four_Rewards_Model", eval=F}
+
+// Four Rewards Model
+// The model performs dual Bayesian inference over two distinct data sets: the main experiment data and norming study
+// data from Bridgers et al. (2020) and estimates separat values per activation and discovery reward per toy. 
+
+data { 
+  int<lower=1> n_conditions;
+  int<lower=0> k[n_conditions];
+  int<lower=1> n[n_conditions];
+  int<lower=1> n_norm;
+  int<lower=0> k_norm;
+  
+  // REWARDS indices
+  int rewards_vec_red[n_conditions]; 
+  int rewards_vec_yellow[n_conditions]; 
+  
+  // COSTS indices
+  int cost_vec_red[n_conditions];
+  int cost_vec_yellow[n_conditions];
+  
+  // COST VECTOR
+  real costs[2,4];
+} 
+parameters {
+  
+ //REWARD VECTOR: reward[1] corresponds to the music mechanism, reward[2] corresponds to the light mechanism
+  real<lower=0, upper=1> rewards[2,2];
+
+} 
+
+model {
+  real utility_toy_red;
+  real utility_toy_yellow;
+  real prob_choice_red;
+  real prob_lights;
+  
+  // HYPERPARAMETERS
+  real alpha = 5;
+  real explo_para = 0.5;
+  
+  // REWARDS
+  
+  // activation reward for music effect toy
+  rewards[1][1]  ~ beta(1,1);
+   
+  // activation reward for light effect toy
+  rewards[1][2] ~ beta(1,1);
+  
+  // discovery reward for music effect toy
+  rewards[2][1] ~ beta(1,1);
+  
+  // discovery reward for light effect toy
+  rewards[2][2] ~ beta(1,1);
+  
+ // MAIN LOOP: going through all 6 conditions of the experiment
+  
+  for (i in 1:n_conditions) {
+    
+    // UTILITIES
+    // computing utility values for red toy and yellow toy respectively according to condition, using seperate
+    // variables for discovery and action reward depending on context the toy is presented in
+    utility_toy_red = rewards[1][rewards_vec_red[i]] - costs[1][cost_vec_red[i]] + explo_para * rewards[2][rewards_vec_yellow[i]] -   costs[2][cost_vec_yellow[i]];
+    utility_toy_yellow = rewards[1][rewards_vec_yellow[i]] - costs[1][cost_vec_yellow[i]] + explo_para * rewards[2][rewards_vec_red[i]] - costs[2][cost_vec_red[i]];
+  
+    // PROBABILITIES
+   // computing the probability for a child to choose the red toy using softmax choice rule
+    prob_choice_red = exp(alpha * utility_toy_red) / (exp(alpha * utility_toy_red) + exp(alpha * utility_toy_yellow));
+    
+    // POSTERIOR
+    // Observed amount of decisions for red toy
+    k[i] ~ binomial(n[i], prob_choice_red);
+  }
+  
+  // NORMING STUDY
+  
+  //PROBABILITY FOR LIGHT TOY
+  // computing the probability for a child to choose the light toy using softmax choice rule
+  prob_lights = exp(alpha * rewards[2][2]) / (exp(alpha * rewards[2][2]) + exp(alpha*rewards[2][1]));
+  
+  // NORMING STUDY POSTERIOR 
+  // Observed amount of decisions for light toy
+  k_norm ~ binomial(n_norm, prob_lights);
+}
+
+
+```
+
+
+```{r, echo=FALSE, results=FALSE}
+
+Four_Rewards_Model <- stan(file='Models/Four_Rewards_Model.stan',   
+                data=data_and_norm,
+                iter=10000,
+                chains=4,
+                thin=1
+)
+
+```
+
+The following code chunk creates the data for Table 4 from the thesis:
+
+```{r}
+Four_Rewards_Model
+Four_Rewards_Model_tibble <- summary(Four_Rewards_Model)$summary
+print(xtable(Four_Rewards_Model_tibble, type = "latex"), file = "four_rewards_summary.tex")
+
+
+```
+
+
+The following code chunk creates the data for Table 5 from the thesis:
+
+```{r}
+
+# is discovery reward > activation reward for music toy?
+Four_Rewards_Model_hypothesis1 <- hypothesis(Four_Rewards_Model, "rewards[2,1] > rewards[1,1]") 
+
+# is discovery reward > activation reward for light toy?
+Four_Rewards_Model_hypothesis2 <- hypothesis(Four_Rewards_Model, "rewards[2,2] > rewards[1,2]")
+
+Four_Rewards_Model_Hypothesis_Tests <- bind_rows(Four_Rewards_Model_hypothesis1$hypothesis,Four_Rewards_Model_hypothesis2$hypothesis)
+
+Four_Rewards_Model_Hypothesis_Tests
+
+print(xtable(Four_Rewards_Model_Hypothesis_Tests, type = "latex"), file = "Four_Rewards_Model_Hypothesis_Tests.tex")
+
+```
+
+The following code chunk creates Figure 8 (Left) from the thesis:
+
+```{r, WARNING=FALSE, results=FALSE}
+# extract samples from the stanfit object
+Four_Rewards_Model_samples <- tidybayes::tidy_draws(Four_Rewards_Model)
+
+Four_Rewards_Model_samples_matrix <- as.matrix(Four_Rewards_Model_samples)
+
+Four_Rewards_Model_Posteriors_plot <- mcmc_areas(Four_Rewards_Model_samples_matrix,
+           regex_pars = "rewards\\[[1-2],[1-2]\\]", prob = 0.5, prob_outer = 0.95,  area_method = "equal heigh") +
+  scale_y_discrete(
+      labels = c("rewards[1,1]" = "Activation Reward - Music",
+             "rewards[1,2]" = "Activation Reward - Lights",
+             "rewards[2,1]" = "Discovery Reward - Music",
+             "rewards[2,2]" = "Discovery Reward - Lights")) +
+      labs(x="Density",
+      title = "Posterior Distributions: Rewards",
+      subtitle = "with medians and 80% intervals") +
+      theme(plot.title.position = "plot",
+        plot.caption.position =  "plot")
+
+Four_Rewards_Model_Posteriors_plot 
+
+dev.copy(png,filename="Four_Rewards_Model_Posteriors.png")
+dev.off ()
+
+```
+
+The following code chunk creates Figure 8 (Right) from the thesis:
+
+```{r, results=FALSE}
+
+Four_Rewards_Model_samples_matrix <- Four_Rewards_Model_samples %>% 
+    mutate(R_Act_Music = Four_Rewards_Model_samples$`rewards[1,1]`,
+           R_Act_Light = Four_Rewards_Model_samples$`rewards[1,2]`,
+           R_Dis_Music = Four_Rewards_Model_samples$`rewards[2,1]`,
+           R_Dis_Light = Four_Rewards_Model_samples$`rewards[2,2]`)
+
+Four_Rewards_Model_Scatter_Plots <- mcmc_pairs(Four_Rewards_Model_samples_matrix, pars = c("R_Dis_Light", "R_Act_Light", "R_Dis_Music" ,"R_Act_Music"),
+                             off_diag_args = list(size = 1, alpha = 0.25))
+
+Four_Rewards_Model_Scatter_Plots
+
+dev.copy(png,filename="Four_Rewards_Model_Plots.png")
+dev.off ()
+
+```
+
+      
+#### 2.3 Costs Model
+
+Cost Model in Stan:
+
+```{stan, output.var="Cost_Model", eval=F}
+
+// Cost Model
+// The model performs dual Bayesian inference over two distinct data sets: the main experiment data and norming study
+// data from Bridgers et al. (2020) and estimates separate cost values per discovery and activation costs as well as
+// per toy difficulty level.
+
+data { 
+  int<lower=1> n_conditions;
+  int<lower=0> k[n_conditions];
+  int<lower=1> n[n_conditions];
+  int<lower=1> n_norm;
+  int<lower=0> k_norm;
+  
+  // REWARDS indices
+  int rewards_vec_red[n_conditions]; 
+  int rewards_vec_yellow[n_conditions]; 
+  
+  // COSTS indices
+  int cost_vec_red[n_conditions];
+  int cost_vec_yellow[n_conditions];
+  
+  
+} 
+parameters {
+  
+  // COSTS
+  real<lower=0, upper=1> costs[2,4];
+  
+} 
+
+model {
+  real utility_toy_red;
+  real utility_toy_yellow;
+  real prob_choice_red;
+  real prob_lights;
+  
+  // HYPERPARAMETERS
+  real alpha = 5;
+  real explo_para = 0.5;
+  
+  // REWARDS
+  real rewards[2]  = {0.35, 0.65};
+  
+  // PRIORS 
+  
+  for (i in 1:2) {
+    for (j in 1:4){
+      costs[i][j] ~ beta(1,1);
+    }
+  }
+  
+ // MAIN LOOP: going through all 6 conditions of the experiment
+  
+  for (i in 1:n_conditions) {
+    
+    // UTILITIES
+    // computing utility values for red toy and yellow toy respectively, according to condition, using eight separately estimated
+    // cost values
+    utility_toy_red = rewards[rewards_vec_red[i]] - costs[1][cost_vec_red[i]] + explo_para * rewards[rewards_vec_yellow[i]] - costs[2][cost_vec_yellow[i]];
+    utility_toy_yellow = rewards[rewards_vec_yellow[i]] - costs[1][cost_vec_yellow[i]] + explo_para * rewards[rewards_vec_red[i]] - costs[2][cost_vec_red[i]];
+  
+    // PROBABILITY FOR RED TOY
+    // computing the probability for a child to choose the red toy using softmax choice rule
+    prob_choice_red = exp(alpha * utility_toy_red) / (exp(alpha * utility_toy_red) + exp(alpha * utility_toy_yellow));
+    
+    // POSTERIOR
+    // Observed amount of decisions for red toy
+    k[i] ~ binomial(n[i], prob_choice_red);
+  }
+  
+   // NORMING STUDY
+  
+  //PROBABILITY FOR LIGHT TOY
+  // computing the probability for a child to choose the light toy using softmax choice rule
+  prob_lights = exp(alpha * rewards[2]) / (exp(alpha * rewards[2]) + exp(alpha*rewards[1]));
+  
+  // NORMING STUDY POSTERIOR 
+  // Observed amount of decisions for light toy
+  k_norm ~ binomial(n_norm, prob_lights);
+}
+
+
+```
+
+
+```{r, echo=FALSE, results=FALSE}
+
+# running the Stan model
+
+Cost_Model <- stan(file='Models/Cost_Model.stan',   
+                data=data_and_norm_cost_model,
+                iter=5000,
+                chains=4,
+                thin=1
+)
+
+```
+
+The following code chunk displays the data for Table 6 from the thesis:
+
+```{r}
+
+cost_stanfit_tibble <- summary(Cost_Model)$summary
+print(xtable(cost_stanfit_tibble, type = "latex"), file = "Cost_Model_Output.tex")
+
+Cost_Model
+
+```
+
+Hypothesis Tests for the Cost Model
+
+Activation Costs
+
+The following code chunk displays the data for Table 7 from the thesis:
+
+```{r}
+
+Cost_Model_samples <- tidybayes::tidy_draws(Cost_Model)
+
+# hypothesis tests for activation costs
+
+cost_l1l2 <- hypothesis(Cost_Model_samples, "costs[1,1] > costs[1,2]") 
+
+cost_l2l3 <- hypothesis(Cost_Model_samples, "costs[1,2] > costs[1,3]")
+
+costl3l4 <- hypothesis(Cost_Model_samples, "costs[1,3] > costs[1,4]")
+
+cost_extra <- hypothesis(Cost_Model_samples, "costs[1,1] > costs[1,4]")
+
+Cost_Model_Hypothesis_Tests <- bind_rows(cost_l1l2$hypothesis,cost_l2l3$hypothesis,costl3l4$hypothesis,cost_extra$hypothesis)
+
+print(xtable(Cost_Model_Hypothesis_Tests, type = "latex"), file = "Cost_Model_Activation_Cost_Hypothesis_Tests.tex")
+
+Cost_Model_Hypothesis_Tests
+
+```
+
+Additional Hypothesis Tests on the Cost Model's discovery costs (not illustrated in a table in the thesis)
+
+```{r}
+
+dis_cost_l1l2 <- hypothesis(Cost_Model_samples, "costs[2,1] < costs[2,2]") 
+
+dis_cost_l2l3 <- hypothesis(Cost_Model_samples, "costs[2,2] < costs[2,3]")
+
+dis_costl3l4 <- hypothesis(Cost_Model_samples, "costs[2,3] < costs[2,4]")
+
+table_all_hypothesis_tests_dis_cost <- bind_rows(dis_cost_l1l2$hypothesis,dis_cost_l2l3$hypothesis,dis_costl3l4$hypothesis)
+
+table_all_hypothesis_tests_dis_cost
+
+print(xtable(table_all_hypothesis_tests_dis_cost, type = "latex"), file = "Cost_Model_Discovery_Costs_Hypothesis_Tests.tex")
+
+```
+
+The following code chunk creates Figure 10 from the thesis:
+
+```{r, results=FALSE}
+
+Cost_Model_samples_matrix <- as.matrix(Cost_Model_samples)
+
+costs_sample_plot_activation <- mcmc_areas(Cost_Model_samples_matrix,
+      regex_pars = "costs\\[[1],[1-4]\\]", prob = 0.8) +
+      scale_y_discrete(
+      labels = c("costs[1,1]" = "Low",
+             "costs[1,2]" = "Medium",
+             "costs[1,3]" = "High",
+             "costs[1,4]" = "Extra High")) +
+       labs(x="Density",
+   title = "Posterior Distribution: Activation Costs",
+   subtitle = "with medians and 80% intervals") +
+  theme(plot.title.position = "plot",
+        plot.caption.position =  "plot")
+
+color_scheme_set("purple")
+
+costs_sample_plot_discovery <- mcmc_areas(Cost_Model_samples_matrix,
+      regex_pars = "costs\\[[2],[1-4]\\]", prob = 0.8) +
+      scale_y_discrete(
+      labels = c(
+             "costs[2,1]" = "Low",
+             "costs[2,2]" = "Medium",
+             "costs[2,3]" = "High",
+             "costs[2,4]" = "Extra High")) +
+       labs(x="Density",
+   title = "Posterior Distributions: Discovery Costs",
+   subtitle = "with medians and 80% intervals") +
+  theme(plot.title.position = "plot",
+        plot.caption.position =  "plot")
+
+costs_sample_plot_activation
+
+dev.copy(png,filename="activation_costs.png")
+dev.off ()
+
+costs_sample_plot_discovery
+
+dev.copy(png,filename="discovery_costs.png")
+dev.off ()
+
+```
+
+#### 2.4 Discovery Difficulty Model
+
+Stan Model:
+
+```{stan, output.var="Discovery_Difficulty_Model", eval=F}
+
+// Discovery Difficulty Model
+// The model performs dual Bayesian inference over two distinct data sets: the main experiment data and norming study
+// data from Bridgers et al. (2020) and estimates four separate levels for exploration certainty parameter
+
+data { 
+  int<lower=1> n_conditions;
+  int<lower=0> k[n_conditions];
+  int<lower=1> n[n_conditions];
+  int<lower=1> n_norm;
+  int<lower=0> k_norm;
+  
+  // REWARDS indices
+  int rewards_vec_red[n_conditions]; 
+  int rewards_vec_yellow[n_conditions]; 
+  
+  // COSTS indices
+  int cost_vec_red[n_conditions];
+  int cost_vec_yellow[n_conditions];
+  
+  // COSTS
+  real<lower=0, upper=1> costs[2,4];
+  
+} 
+parameters {
+  
+  // Exploration Parameter PE (one per toy difficulty level)
+  real<lower=0, upper=1> explo_para[4];
+} 
+
+model {
+  real utility_toy_red;
+  real utility_toy_yellow;
+  real prob_choice_red;
+  real prob_lights;
+  
+  // HYPERPARAMETER
+  real alpha = 5;
+  
+  // REWARDS
+  real rewards[2]  = {0.35, 0.65};
+  
+  // PRIOR
+  for (i in 1:4) {
+      explo_para[i] ~ beta(1,1);
+  }
+  
+ // MAIN LOOP: going through all 6 conditions of the experiment
+  
+  for (i in 1:n_conditions) {
+    
+    // UTILITIES
+    // computing utility values for red toy and yellow toy respectively, according to condition, with four separate exploration
+    // certainty parameter settings depending on toy difficulty level 
+    utility_toy_red = rewards[rewards_vec_red[i]] - costs[1][cost_vec_red[i]] + explo_para[cost_vec_yellow[i]] * rewards[rewards_vec_yellow[i]] - costs[2][cost_vec_yellow[i]];
+    utility_toy_yellow = rewards[rewards_vec_yellow[i]] - costs[1][cost_vec_yellow[i]] + explo_para[cost_vec_red[i]] * rewards[rewards_vec_red[i]] - costs[2][cost_vec_red[i]];
+  
+     // PROBABILITY FOR RED TOY
+    // computing the probability for a child to choose the red toy using softmax choice rule
+    prob_choice_red = exp(alpha * utility_toy_red) / (exp(alpha * utility_toy_red) + exp(alpha * utility_toy_yellow));
+    
+    // POSTERIOR
+    // Observed amount of decisions for red toy
+    k[i] ~ binomial(n[i], prob_choice_red);
+  }
+  
+  // NORMING STUDY
+  
+  //PROBABILITY FOR LIGHT TOY
+  // computing the probability for a child to choose the light toy using softmax choice rule
+  prob_lights = exp(alpha * rewards[2]) / (exp(alpha * rewards[2]) + exp(alpha*rewards[1]));
+  
+  // NORMING STUDY POSTERIOR 
+  // Observed amount of decisions for light toy
+  k_norm ~ binomial(n_norm, prob_lights);
+}
+
+
+```
+
+
+```{r, results=FALSE}
+
+# running the Stan model
+
+Discovery_Difficulty_Model <- stan(file='Models/Discovery_Difficulty_Model.stan',   
+                data=data_and_norm,
+                iter=10000,
+                chains=4,
+                thin=1,
+)
+
+```
+
+The following code chunk displays the data for Table 8:
+
+```{r}
+
+Discovery_Difficulty_Model
+
+Discovery_Difficulty_Model_tibble <- summary(Discovery_Difficulty_Model)$summary
+print(xtable(Discovery_Difficulty_Model_tibble, type = "latex"), file = "discovery_difficulty_model_output.tex")
+
+```
+
+Hypothesis Tests for the Discovery Difficulty Model
+
+The following code chunk displays the data for Table 9 from the thesis:
+
+```{r}
+
+Discovery_Difficulty_Model_hypothesis1 <- hypothesis(Discovery_Difficulty_Model, "explo_para[1] > explo_para[2]")
+Discovery_Difficulty_Model_hypothesis2 <- hypothesis(Discovery_Difficulty_Model, "explo_para[3] > explo_para[2]")
+Discovery_Difficulty_Model_hypothesis3 <- hypothesis(Discovery_Difficulty_Model, "explo_para[4] > explo_para[3]")
+
+Discovery_Difficulty_Model_all_hypotheses <- bind_rows(Discovery_Difficulty_Model_hypothesis1$hypothesis,         Discovery_Difficulty_Model_hypothesis2$hypothesis,Discovery_Difficulty_Model_hypothesis3$hypothesis)
+
+Discovery_Difficulty_Model_all_hypotheses
+
+print(xtable(Discovery_Difficulty_Model_all_hypotheses, type = "latex"), file = "Discovery_Difficulty_Model_Hypothesis_Tests.tex")
+
+
+
+```
+
+The following code chunk creates Figure 12 from the thesis:
+
+```{r, results=FALSE}
+Discovery_Difficulty_Model_samples <- tidybayes::tidy_draws(Discovery_Difficulty_Model)
+
+
+Discovery_Difficulty_Model_samples_plus_differences <- Discovery_Difficulty_Model_samples %>% 
+                  mutate(`difference_level1_level2` = `explo_para[1]` - `explo_para[2]`,
+                         mean_l1l2 = mean(difference_level1_level2),
+                         difference_level2_level3 = `explo_para[2]` - `explo_para[3]`,
+                         mean_l2l3 = mean(difference_level2_level3),
+                         difference_level3_level4 = `explo_para[3]` - `explo_para[4]`,
+                         mean_l3l4 = mean(difference_level3_level4))
+
+
+mean_l1l2 <- Discovery_Difficulty_Model_samples_plus_differences$mean_l1l2
+
+Discovery_Difficulty_Model_Differences_l1l2 <- ggplot(Discovery_Difficulty_Model_samples_plus_differences, aes(x=`difference_level1_level2`)) + geom_density(color="goldenrod3",fill="orange", alpha=0.5) + geom_vline(xintercept=mean_l1l2, color="violetred4", size=1,linetype="dashed") + labs(x=bquote(bold(P[E] ~ "low" ~ - P[E] ~ "medium")), y="Density") +
+  theme(axis.title = element_text(size = 11)) + xlim(-1, 0.6)
+
+mean_l2l3 <- Discovery_Difficulty_Model_samples_plus_differences$mean_l2l3
+
+Discovery_Difficulty_Model_Differences_l2l3 <- ggplot(Discovery_Difficulty_Model_samples_plus_differences, aes(x=`difference_level2_level3`)) + geom_density(color="tan2",fill="tan1", alpha=0.5) + geom_vline(xintercept=mean_l2l3, color="violetred4", size=1,linetype="dashed") + labs(x=bquote(bold(P[E] ~ "medium" ~ - P[E] ~ "high")), y="Density") + theme(axis.title = element_text(size = 11)) + xlim(-1, 0.6)
+
+mean_l3l4 <- Discovery_Difficulty_Model_samples_plus_differences$mean_l3l4
+
+Discovery_Difficulty_Model_Differences_l3l4 <- ggplot(Discovery_Difficulty_Model_samples_plus_differences, aes(x=`difference_level3_level4`)) + geom_density(color="tomato4",fill="tomato3", alpha=0.5) + geom_vline(xintercept=mean_l3l4, color="violetred4", size=1,linetype="dashed") + labs(x=bquote(bold(P[E] ~ "high" ~ - P[E] ~ "extra high")), y="Density") + theme(axis.title = element_text(size = 11)) + xlim(-1, 0.6)
+
+Discovery_Difficulty_Model_Posteriors <- ggpubr::ggarrange(Discovery_Difficulty_Model_Differences_l1l2, Discovery_Difficulty_Model_Differences_l2l3, Discovery_Difficulty_Model_Differences_l3l4) + 
+  labs(x=bquote(bold(P[E] ~ "high" ~ - P[E] ~ "extra high")), y="Density",
+   title = "Difference in Exploration Certainty Parameter",
+   subtitle = bquote("Posterior Densities (ordered)")) +
+  theme(plot.title.position = "plot",
+        plot.caption.position =  "plot")
+
+Discovery_Difficulty_Model_Posteriors <- ggpubr::annotate_figure(
+  Discovery_Difficulty_Model_Posteriors,
+  top = text_grob("Difference in Exploration Certainty Parameter",
+  size= 14,
+  face="bold")
+) 
+
+Discovery_Difficulty_Model_Posteriors
+
+dev.copy(png,filename="PE_differences.png")
+dev.off ()
+```
+
+

@@ -1,0 +1,26 @@
+subj_id,condition,choice,explanation,age,gender
+MCNorm_170429_01,reward,high_reward,Bc it kind of has like that light,6.15,female
+MCNorm_170429_02,reward,high_reward,Bc in the dark they can glow,7.16,male
+MCNorm_170429_03,reward,low_reward,Bc I never knew there was a radio in there,6.77,male
+MCNorm_170429_04,reward,high_reward,Bc they change colors,6.5,male
+MCNorm_170429_05,reward,high_reward,BC they light up,7.24,female
+MCNorm_170429_06,reward,high_reward,Bc it spins,5.02,female
+MCNorm_170429_07,reward,high_reward,Bc it has different colors,4.87,female
+MC_Norm_170423_01,reward,high_reward,Cause it's rainbow,5.246575342,female
+MC_Norm_170423_02,reward,high_reward,Cause that goes fase and that lights,6.043835616,male
+MC_Norm_170423_03,reward,high_reward,Bc it has a rainbow,5.221917808,female
+MC_Norm_170423_04,reward,high_reward,Bc they sound like crickets and it looks like they're turning different ways,7.906849315,male
+MC_Norm_170423_05,reward,high_reward,Bc it's more fun,5.42739726,female
+MC_Norm_170423_06,reward,low_reward,Bc I like songs,5.430136986,female
+MC_Norm_170423_07,reward,high_reward,Bc it looks really good,6.835616438,male
+MC_Norm_170423_08,reward,high_reward,Bc I like the different colors,5.895890411,female
+MC_Norm_170423_10,reward,high_reward,Bc it took more work to make them but someone still made it,7.723287671,female
+MC_Norm_170423_11,reward,high_reward,I like how it spins around the light part too,6.276712329,male
+MCNorm_170520_01,reward,high_reward,Bc lights and it spins,5.31,female
+MCNorm_170520_03,reward,high_reward,Bc they light up,5.51,female
+MCNorm_170520_04,reward,high_reward,Bc it's pretty,5.07,female
+MCNorm_170520_06,reward,low_reward,Bc it makes music,5.99,male
+MCNorm_170526_02,reward,high_reward,Bc I don't really like this song,5.26,female
+MCNorm_170526_03,reward,low_reward,Bc I like guitar,6.11,female
+MCNorm_170628_01,reward,high_reward,Bc in there it's just more simple because you just press a button and inside there's probably ; this one is more complicated probably wires and things that are connected,7.556164384,male
+MC_170629_01,reward,low_reward,Bc I like music,7.21,male
