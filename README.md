@@ -17,6 +17,12 @@ NUC_Dual_Bayesian_Inference_Main.Rmd.
 Running all chunks of the script also creates all relevant Tables and Figures 
 belonging to my master thesis. 
 
+Alternatively, you can also read the pre-run 
+
+NUC_Dual_Bayesian_Inference_Main.html
+
+markdown script to avoid having to run all models again on your own system.
+
 ## The Data
 
 All data was taken from Bridgers et al. (2020)'s own study repository, available at: 
